@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Functors</title>
+
+        <link rel="stylesheet" href="reveal/css/reveal.css" />
+        <link rel="stylesheet" href="reveal/css/theme/default.css" id="theme" />
+        <link rel="stylesheet" href="reveal/lib/css/zenburn.css" />
+
+		<script src="reveal/lib/js/head.min.js"></script>
+        <script type="text/javascript" src="reveal/js/reveal.js"></script>
+    </head>
+
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h2>Functors</h2>
+                    <p class="fragment fade-in">
+                        What are they, and what are they good for?
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Functors are a class of types</h2>
+
+                    <div class="fragment fade-in">
+                        <p>The class is defined as</p>
+
+                        <pre><code class="language-haskell" data-trim>
+class Functor f where
+  fmap :: (a -> b) -> f a -> f b
+                        </code></pre>
+                    </div>
+
+                    <p class="fragment fade-in">
+                        It defines one function,<br />
+                        which takes another function,<br />
+                        and changes the contents of the functor.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>The list functor</h2>
+
+                    <div class="fragment fade-in">
+                        <p>For lists, fmap is the same function as map</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+instance Functor [] where
+  fmap = map
+                        </code></pre>
+                    </div>
+
+                    <p class="fragment fade-in">
+                        This means that the functor type <code>f a</code> means
+                        <code>[a]</code>
+                    </p>
+
+                    <p class="fragment fade-in">
+                        fmap is just a generalization of map that can work on things that are not lists, and
+                        Functors are the types that support the fmap operation.
+                    </p>
+                </section>
+
+                <section>
+                    <p>But what about fmap for other Functors?</p>
+
+                    <div class="fragment fade-in">
+                        <p>Here's the definition for Maybe:</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+instance Functor Maybe where
+  fmap f (Just x) = Just (f x)
+  fmap f Nothing  = Nothing
+                        </code></pre>
+                    </div>
+
+                    <div class="fragment fade-in">
+                        <p>Here, fmap applies the function only if the value is Just x.</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+fmapJust = fmap (*3) (Just 5)
+-- => Just 15
+
+fmapNothing = fmap (*3) Nothing
+-- => Nothing
+                        </code></pre>
+                    </div>
+                </section>
+
+                <section>
+                    <p>The idea of being able to "map" over arbitrary types is powerful.</p>
+
+                    <div class="fragment fade-in">
+                        <p>Consider mapping over a tree, which might be defined as:</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+data Tree a = Node a (Tree a) (Tree a)
+            | EmptyTree
+                        </code></pre>
+                    </div>
+
+                    <div class="fragment fade-in">
+                        <p>For it, the instance of Functor is defined as:</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+instance Functor Tree where
+  fmap _ EmptyTree           = EmptyTree
+  fmap f (Node x left right) = Node (f x) (fmap f left) (fmap f right)
+                        </code></pre>
+                    </div>
+
+                    <div class="fragment fade-in">
+                        <p>This lets us map over a tree:</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+leaf x = Node x EmptyTree EmptyTree
+
+fmapTree = fmap (*5) (Node 10 (leaf 3) (leaf 42))
+-- => (Node 50 (Node 15 EmptyTree EmptyTree) (Node 210 EmptyTree EmptyTree))
+                        </code></pre>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>IO is also a functor</h2>
+
+                    <pre><code class="language-haskell" data-trim="">
+instance Functor IO where
+  fmap f action = do
+    result <- action
+    return (f result)
+                    </code></pre>
+
+                    <p class="fragment fade-in">
+                        This starts to show the importance of the distinction between containing in
+                        the type sense and actually containing the data.<br />
+                        <br />
+                        An IO action doesn't actually contain the result, but its type contains the
+                        type of the result.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>But what good is that?</h2>
+
+                    <div class="fragment fade-in">
+                        <p>Instead of writing</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+main1 = do
+  line <- getLine
+  let reverseLine = reverse line
+  putStrLn "Reversed: " ++ reverseLine
+                        </code></pre>
+                    </div>
+
+                    <div class="fragment fade-in">
+                        <p>You could write</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+main1 = do
+  line <- fmap reverse getLine
+  putStrLn "Reversed: " ++ line
+                        </code></pre>
+                    </div>
+
+                    <p class="fragment fade-in">
+                        Here, fmap creates a new IO action based on the getLine IO action that
+                        also reverses the input line.
+                    </p>
+                </section>
+
+                <section>
+                    <h2>Event functions are Functors!</h2>
+
+                    <p>
+                        In the case of functions, applying another function with fmap just means
+                        function composition.
+                    </p>
+
+                    <pre><code class="language-haskell" data-trim="">
+instance Functor ((->) r) where
+  fmap f g = f . g
+-- Equivalent to: fmap f g = (\x -> f (g x))
+                    </code></pre>
+
+                    <div class="fragment fade-in">
+                        <p>What on earth is</p>
+
+                        <pre><code class="language-haskell" data-trim="">
+((->) r)
+                        </code></pre>
+                    </div>
+
+                    <div class="fragment fade-in">
+                        <p>
+                            It's a syntacticaly oddity, but it just means the first two thirds of
+                        </p>
+
+                        <pre><code class="language-haskell" data-trim="">
+(r -> a)
+                        </code></pre>
+
+                        <p>
+                            The instance definition is basically just saying that, for all functions taking
+                            a single parameter of type r, fmap is defined like this.
+                        </p>
+
+                        <p>
+                            (the type input parameter r is ignored as far as fmap is concerned)
+                        </p>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>The Functor Laws</h2>
+
+                    <p>Like the laws of robotics, except that they are nothing like them</p>
+
+                    <ol>
+                        <li class="fragment fade-in">
+                            fmapping the identity function (id) should never change something
+
+                            <pre><code class="language-haskell" data-trim="">
+fmap id = id
+                            </code></pre>
+                        </li>
+
+                        <li class="fragment fade-in">
+                            fmapping is distributive over function composition
+
+                            <pre><code class="language-haskell" data-trim="">
+fmap (f . g) x = fmap f (fmap g x)
+                            </code></pre>
+                        </li>
+                    </ol>
+                </section>
+
+                <section>
+                    <h2>For next time...</h2>
+
+                    <p>
+                        What if both the function and the thing "mapped" over were in a functor?
+                    </p>
+                </section>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            Reveal.initialize({
+                controls: false,
+                progress: true,
+                history: true,
+                theme: 'default',
+                transition: 'none',
+                mouseWheel: false,
+                rollingLinks: false,
+                dependencies: [
+                    {
+                        src: 'reveal/plugin/markdown/showdown.js',
+                        condition: function() {
+                            return !!document.querySelector( '[data-markdown]' );
+                        }
+                    },
+                    {
+                        src: 'reveal/plugin/markdown/markdown.js',
+                        condition: function() {
+                            return !!document.querySelector( '[data-markdown]' );
+                        }
+                    },
+                    {
+                        src: 'reveal/plugin/highlight/highlight.js',
+                        async: true,
+                        callback: function() {
+                            hljs.initHighlightingOnLoad();
+                        }
+                    },
+                ]
+            })
+        </script>
+    </body>
+</html>
