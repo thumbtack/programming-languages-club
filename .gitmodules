@@ -1,0 +1,3 @@
+[submodule "2013-09-14/jeremy/reveal"]
+	path = 2013-09-14/jeremy/reveal
+	url = https://github.com/hakimel/reveal.js.git
